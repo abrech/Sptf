@@ -24,7 +24,6 @@ class Evaluator:
 
     def evaluate_period(self, pl_name, days, limit):
         most_played = self.__db.get_most_played_in_period(days, limit)
-        print(most_played)
         if len(most_played) < 5:
             return
         self.__spotify.set_playlist(most_played, pl_name)
