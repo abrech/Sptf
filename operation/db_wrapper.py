@@ -1,4 +1,3 @@
-from enum import Enum
 import sqlite3 as sql
 import time
 import math
@@ -10,9 +9,9 @@ from util.logging import Logger
 
 
 # TODO finish this
-class SqlStatements(Enum):
-    CREATE_TABLE_SONGS = "CREATE TABLE songs " \
-                         "(uri TEXT not null primary key, song TEXT, artist TEXT, artist_uri TEXT, " \
+class SqlStatements:
+    CREATE_TABLE_SONGS = "CREATE TABLE songs " + \
+                         "(uri TEXT not null primary key, song TEXT, artist TEXT, artist_uri TEXT, " + \
                          "album TEXT, popularity INTEGER, duration INTEGER, img_src TEXT, times_played INTEGER);",
     CREATE_TABLE_ARTISTS = "create table artists (artist_uri TEXT not null primary key, name TEXT, popularity INTEGER);"
     CREATE_TABLE_SONGS_TIMES = "create table songs_times (song_uri TEXT, datetime INTEGER);",
@@ -24,13 +23,28 @@ class SqlStatements(Enum):
                           "{duration}, '{img_src}', 0);"
 
 
+SQL_STATEMENTS = {
+    'CREATE_TABLE_SONGS': "CREATE TABLE songs "
+                          "(uri TEXT not null primary key, song TEXT, artist TEXT, artist_uri TEXT, "
+                          "album TEXT, popularity INTEGER, duration INTEGER, img_src TEXT, times_played INTEGER);",
+    'CREATE_TABLE_ARTISTS': "create table artists (artist_uri TEXT not null primary key, name TEXT, popularity "
+                            "INTEGER);",
+    'CREATE_TABLE_SONGS_TIMES': "create table songs_times (song_uri TEXT, datetime INTEGER);",
+    'CREATE_TABLE_ARTISTS_GENRES': "create table artists_genres (artist_uri TEXT, genre TEXT);",
+    'SELECT_TABLES': "SELECT name FROM sqlite_master WHERE type='table';",
+    'SELECT_URI': "select uri from songs where uri like '{uri}';",
+    'INSERT_IGNORE_SONGS': "insert or ignore into songs values ('{uri}', '{song}', "
+                           "'{artist}', '{artist_uri}', '{album}',{popularity}, "
+                           "{duration}, '{img_src}', 0);"
+}
+
+
 class DBWrapper:
     def __init__(self, logger: Logger, db_file="spotifysongs.db"):
         self.__logger = logger
         self.__connection = sql.connect(db_file, check_same_thread=False)
         self.__cursor = self.__get_cursor()
-
-        tables = self.__cursor.execute(SqlStatements.SELECT_TABLES.value).fetchall()
+        tables = self.__cursor.execute(SQL_STATEMENTS['SELECT_TABLES']).fetchall()
         print(tables)
         if len(tables) <= 0:
             self.__create_tables()
@@ -42,23 +56,23 @@ class DBWrapper:
         return self.__connection.cursor()
 
     def __create_tables(self):
-        self.__cursor.execute(SqlStatements.CREATE_TABLE_SONGS.value)
-        self.__cursor.execute(SqlStatements.CREATE_TABLE_SONGS_TIMES.value)
-        self.__cursor.execute(SqlStatements.CREATE_TABLE_ARTISTS.value)
-        self.__cursor.execute(SqlStatements.CREATE_TABLE_ARTISTS_GENRES.value)
+        self.__cursor.execute(SQL_STATEMENTS['CREATE_TABLE_SONGS'])
+        self.__cursor.execute(SQL_STATEMENTS['CREATE_TABLE_SONGS_TIMES'])
+        self.__cursor.execute(SQL_STATEMENTS['CREATE_TABLE_ARTISTS'])
+        self.__cursor.execute(SQL_STATEMENTS['CREATE_TABLE_ARTISTS_GENRES'])
 
     def execute_select(self, statement):
         return self.__cursor.execute(statement).fetchall()
 
     def add_song(self, song_obj: Song):
         # look for song in db and get length of result (should be 0 or 1)
-        res = self.__cursor.execute(SqlStatements.SELECT_URI.value.format(uri=song_obj.uri)).fetchall()
+        res = self.__cursor.execute(SQL_STATEMENTS['SELECT_URI'].format(uri=song_obj.uri)).fetchall()
         before_res = len(res)
-        self.__cursor.execute(SqlStatements.INSERT_IGNORE_SONGS.value.format(
+        self.__cursor.execute(SQL_STATEMENTS['INSERT_IGNORE_SONGS'].format(
             uri=song_obj.uri, song=song_obj.song, artist=song_obj.artist, artist_uri=song_obj.artist_uri,
             album=song_obj.album, popularity=song_obj.popularity, duration=song_obj.duration, img_src=song_obj.img_src))
         # look for song after insert or ignore, get new length of result
-        res = self.__cursor.execute(SqlStatements.SELECT_URI.value.format(uri=song_obj.uri)).fetchall()
+        res = self.__cursor.execute(SQL_STATEMENTS['SELECT_URI'].format(uri=song_obj.uri)).fetchall()
         after_res = len(res)
 
         update = f"update songs set times_played = times_played + 1 where uri like '{song_obj.uri}';"

@@ -1,7 +1,7 @@
 import requests
 
 from operation.db_wrapper import DBWrapper
-from sptfy_wrapper import SptfyWrapper
+from operation.sptfy_wrapper import SptfyWrapper
 from util.logging import Logger
 
 
@@ -17,6 +17,7 @@ class SongCollector:
         try:
             song_obj = self.__spotify.get_song_info()
             artist_obj = self.__spotify.get_artist_info(song_obj.artist_uri)
+            self.__logger.log(f"COLL collected {song_obj.song} by {artist_obj.name}")
         except requests.exceptions.ReadTimeout:
             self.__logger.log("COLL ReadTimeout Exception occured while collecting", level=1)
             if retries > 0:

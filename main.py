@@ -1,3 +1,4 @@
+import atexit
 import time
 import re
 import urllib3
@@ -33,8 +34,8 @@ def eval_all(recursive_count=0):
 
 
 def eval_period():
-    ev.evaluate_period('My favs - 4', 28, 25)
-    ev.evaluate_period('My favs - 2', 14, 20)
+    ev.evaluate_period('favs4', 28, 25)
+    ev.evaluate_period('favs2', 14, 20)
 
 
 def run_collector():
@@ -83,3 +84,8 @@ sched.add_job(eval_all, 'cron', hour='2', minute='30')
 sched.add_job(eval_period, 'cron', hour='3', minute='30')
 sched.add_job(run_collector, 'interval', seconds=10)
 sched.start()
+
+atexit.register(lambda: sched.shutdown())
+eval_period()
+while True:
+    pass
