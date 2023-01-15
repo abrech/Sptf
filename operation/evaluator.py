@@ -3,7 +3,7 @@ from operation.sptfy_wrapper import SptfyWrapper
 from util.logging import Logger
 
 
-class SongEvaluator:
+class Evaluator:
     def __init__(self, sp: SptfyWrapper, db: DBWrapper, logger: Logger):
         self.__logger = logger
         self.__db = db
