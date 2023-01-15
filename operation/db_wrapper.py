@@ -1,4 +1,4 @@
-from enum import StrEnum
+from enum import Enum
 import sqlite3 as sql
 import time
 import math
@@ -10,7 +10,7 @@ from util.logging import Logger
 
 
 # TODO finish this
-class SqlStatements(StrEnum):
+class SqlStatements(Enum):
     CREATE_TABLE_SONGS = "CREATE TABLE songs " \
                          "(uri TEXT not null primary key, song TEXT, artist TEXT, artist_uri TEXT, " \
                          "album TEXT, popularity INTEGER, duration INTEGER, img_src TEXT, times_played INTEGER);",
@@ -30,7 +30,7 @@ class DBWrapper:
         self.__connection = sql.connect(db_file, check_same_thread=False)
         self.__cursor = self.__get_cursor()
 
-        tables = self.__cursor.execute(SqlStatements.SELECT_TABLES).fetchall()
+        tables = self.__cursor.execute(SqlStatements.SELECT_TABLES.value).fetchall()
         print(tables)
         if len(tables) <= 0:
             self.__create_tables()
@@ -42,23 +42,23 @@ class DBWrapper:
         return self.__connection.cursor()
 
     def __create_tables(self):
-        self.__cursor.execute(SqlStatements.CREATE_TABLE_SONGS)
-        self.__cursor.execute(SqlStatements.CREATE_TABLE_SONGS_TIMES)
-        self.__cursor.execute(SqlStatements.CREATE_TABLE_ARTISTS)
-        self.__cursor.execute(SqlStatements.CREATE_TABLE_ARTISTS_GENRES)
+        self.__cursor.execute(SqlStatements.CREATE_TABLE_SONGS.value)
+        self.__cursor.execute(SqlStatements.CREATE_TABLE_SONGS_TIMES.value)
+        self.__cursor.execute(SqlStatements.CREATE_TABLE_ARTISTS.value)
+        self.__cursor.execute(SqlStatements.CREATE_TABLE_ARTISTS_GENRES.value)
 
     def execute_select(self, statement):
         return self.__cursor.execute(statement).fetchall()
 
     def add_song(self, song_obj: Song):
         # look for song in db and get length of result (should be 0 or 1)
-        res = self.__cursor.execute(SqlStatements.SELECT_URI.format(uri=song_obj.uri)).fetchall()
+        res = self.__cursor.execute(SqlStatements.SELECT_URI.value.format(uri=song_obj.uri)).fetchall()
         before_res = len(res)
-        self.__cursor.execute(SqlStatements.INSERT_IGNORE_SONGS.format(
+        self.__cursor.execute(SqlStatements.INSERT_IGNORE_SONGS.value.format(
             uri=song_obj.uri, song=song_obj.song, artist=song_obj.artist, artist_uri=song_obj.artist_uri,
             album=song_obj.album, popularity=song_obj.popularity, duration=song_obj.duration, img_src=song_obj.img_src))
         # look for song after insert or ignore, get new length of result
-        res = self.__cursor.execute(SqlStatements.SELECT_URI.format(uri=song_obj.uri)).fetchall()
+        res = self.__cursor.execute(SqlStatements.SELECT_URI.value.format(uri=song_obj.uri)).fetchall()
         after_res = len(res)
 
         update = f"update songs set times_played = times_played + 1 where uri like '{song_obj.uri}';"
@@ -74,7 +74,8 @@ class DBWrapper:
             self.__logger.log("DB Added " + str(song_obj))
 
     def add_artist(self, artist_obj: Artist):
-        statement = f"insert or ignore into artists values('{artist_obj.uri}', '{artist_obj.name}', {artist_obj.popularity});"
+        statement = f"insert or ignore into artists values('{artist_obj.uri}', '{artist_obj.name}'," \
+                    f" {artist_obj.popularity});"
         self.__cursor.execute(statement)
         artist_in_genres = self.__cursor.execute(
             f"select count(artist_uri) from artists_genres where artist_uri like '{artist_obj.uri}';").fetchall()
@@ -109,7 +110,8 @@ class DBWrapper:
 
     def get_most_played_in_period(self, days, limit):
         time_start = math.floor((datetime.now(timezone.utc) - timedelta(days)).timestamp())
-        statement = f"select s.uri, count(t.song_uri) as times from songs s join songs_times t on s.uri = t.song_uri where t.datetime > {time_start} group by s.uri order by times desc;"
+        statement = f"select s.uri, count(t.song_uri) as times from songs s join songs_times t on s.uri = t.song_uri " \
+                    f"where t.datetime > {time_start} group by s.uri order by times desc;"
         uris = self.__cursor.execute(statement).fetchall()
         uris_limited = uris[:limit]
         out = [uri[0] for uri in uris_limited]
@@ -123,7 +125,9 @@ class DBWrapper:
         for genre in genres[1:]:
             genre_str += f" or genre like '{genre}'"
         print(genre_str)
-        statement = f"select distinct s.uri, s.song, s.artist, s.artist_uri, s.album, s.popularity, s.duration, s.img_src, s.times_played from songs s join artists_genres g on s.artist_uri = g.artist_uri where {genre_str} order by s.times_played desc;"
+        statement = f"select distinct s.uri, s.song, s.artist, s.artist_uri, s.album, s.popularity, s.duration, " \
+                    f"s.img_src, s.times_played from songs s join artists_genres g on s.artist_uri = g.artist_uri " \
+                    f"where {genre_str} order by s.times_played desc;"
         uris = self.__cursor.execute(statement).fetchall()
         uris_limited = uris[:limit]
         out = [uri[0] for uri in uris_limited]
@@ -145,9 +149,11 @@ class DBWrapper:
             post = f" order by times desc;"
             time_start = math.floor((datetime.now(timezone.utc) - timedelta(int(kwargs["days"]))).timestamp())
             if len(genre_str) > 1:
-                statement += f" join songs_times t on s.uri = t.song_uri where t.datetime > {time_start} and ({genre_str}) group by s.uri "
+                statement += f" join songs_times t on s.uri = t.song_uri where t.datetime > {time_start} and " \
+                             f"({genre_str}) group by s.uri "
             else:
-                statement += f" join songs_times t on s.uri = t.song_uri where t.datetime > {time_start} group by s.uri "
+                statement += f" join songs_times t on s.uri = t.song_uri where t.datetime > {time_start} " \
+                             f"group by s.uri "
 
         elif len(genre_str) > 1:
             statement += f" where {genre_str} "
@@ -159,7 +165,8 @@ class DBWrapper:
         return out
 
     def get_most_played_by_song_popularity(self, min_popularity, max_popularity, limit):
-        statement = f"select * from songs where popularity <= {max_popularity} and popularity >= {min_popularity} order by times_played desc;"
+        statement = f"select * from songs where popularity <= {max_popularity} and popularity >= {min_popularity} " \
+                    f"order by times_played desc;"
         uris = self.__cursor.execute(statement).fetchall()
         uris_limited = uris[:limit]
         out = [uri[0] for uri in uris_limited]

@@ -33,8 +33,8 @@ def eval_all(recursive_count=0):
 
 
 def eval_period():
-    ev.evaluate_period('4week', 28, 25)
-    ev.evaluate_period('2week', 14, 20)
+    ev.evaluate_period('My favs - 4', 28, 25)
+    ev.evaluate_period('My favs - 2', 14, 20)
 
 
 def run_collector():
