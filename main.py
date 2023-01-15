@@ -6,7 +6,7 @@ import requests
 import spotipy.exceptions
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from config.constants import SCOPE, ERROR_LOG_FILE, LOG_FILE
+from config.constants import SCOPE, ERROR_LOG_FILE, LOG_FILE, ACCOUNT_NAME
 from operation.db_wrapper import DBWrapper
 from operation.evaluator import Evaluator
 from operation.song_collector import SongCollector
